@@ -2,35 +2,23 @@
 <template>
   <div class="mainContainer">
     <div ref="container" id="container"></div>
-
+    <div class="input_select_field">
     <div>
-        <p>Position</p>
-        <input ref="text" type="number" name="position" v-model="position.x" @change="inputChange" />
-        <input type="number" name="position" v-model="position.y" @change="inputChange" />
-        <input type="number" name="position" v-model="position.z" @change="inputChange" />
-    </div>
-
-    <div>
-        <p>Rotation</p>
-        <input type="number" name="rotation" v-model="rotation.x" @change="inputChange" />
-        <input type="number" name="rotation" v-model="rotation.y" @change="inputChange" />
-        <input type="number" name="rotation" v-model="rotation.z" @change="inputChange" />
-    </div>
-
-    <div>
-        <p>Scale</p>
-        <input type="number" name="scale" v-model="scale.x" @change="inputChange" />
-        <input type="number" name="scale" v-model="scale.y" @change="inputChange" />
-        <input type="number" name="scale" v-model="scale.z" @change="inputChange" />
+      <p>Position</p>
+      <input type="number" name="position" v-model="position.x" @change="inputChange"/>
+      <input type="number" name="position" v-model="position.y" @change="inputChange"/>
+      <input type="number" name="position" v-model="position.z" @change="inputChange"/>
     </div>
 
       <div>
-      <p>Position Rotation Scaled Selector</p>
-      <select  @change="positionRotationScale" v-model="selectTool">
-        <option>position</option>
-        <option>rotation</option>
-        <option>scale</option>
-      </select>
+        <p>Position Rotation Scaled Selector</p>
+        <select v-model="selected_tool">
+          <option>translate</option>
+          <option>rotate</option>
+          <option>scale</option>
+        </select>
+      </div>
+
     </div>
   </div>
 </template>
@@ -52,17 +40,18 @@ export default {
       gltf: null,
       orbit: null,
       control: null,
+      selected_tool: "translate",
 
-      selectTool: "position",
-      position: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
+      tool_name: "position",
+      position: {x: 0, y: 0, z: 0},
+      rotation: {x: 0, y: 0, z: 0},
       scale: { x: 3, y: 3, z: 3 },
     }
   },
   mounted() {
     let container = this.$refs.container;
     // SET AND ADD CAMERA
-    this.camera = new THREE.PerspectiveCamera(75, container.clientWidth/container.clientHeight, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     this.camera.position.z = 1;
     // ADD SCENE
     this.scene = new THREE.Scene();
@@ -72,7 +61,7 @@ export default {
     // RENDER IN PAGE
     this.renderer = new THREE.WebGLRenderer({antialias: true});
     this.renderer.setClearColor('#dbdbdb');
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.gammaFactor = 1.5;
     this.renderer.gammaOutput = true;
     container.appendChild(this.renderer.domElement);
@@ -90,10 +79,13 @@ export default {
     this.control = new TransformControls( this.camera, this.renderer.domElement );
     this.control.setSize(1);
     this.control.addEventListener( 'change', () => { this.renderer.render(this.scene, this.camera); });
+
+
     // EVENT LISTNER TO ENABLE ORBIT CAMERA AND CHANGE VALUE OF INPUTS
     this.control.addEventListener( 'dragging-changed', ( event ) => {
-      const gltf = this.gltf[this.selectTool];
-      this[this.selectTool] = {x: gltf.x, y: gltf.y, z: gltf.z}
+    const gltf = this.gltf[this.tool_name];
+
+    this[this.tool_name] = {x: gltf.x, y: gltf.y, z: gltf.z}
       this.orbit.enabled = ! event.value
     });
     // ADD GLTFLOADER
@@ -115,52 +107,50 @@ export default {
     error => {
       console.log(error);
     });
-},
+ },
+  watch: {
+    selected_tool: function(e) {
+      this.control.setMode (e)
+      switch(e){
+        case "translate": this.tool_name = "position";
+          break;
+        case "rotate": this.tool_name = "rotation";
+          break;
+      }
+
+    },
+  },
 
   methods: {
-    // CONTROLS SET MODE CHANGE
-    positionRotationScale: function(e) {
-      console.log(this.$ref)
-      switch (e.target.options.selectedIndex) {
-
-        case 0:
-          this.control.setMode( "translate" );
-          break;
-
-        case 1:
-          this.control.setMode( "rotate" );
-          break;
-
-        case 2:
-          this.control.setMode( "scale" );
-          break;
-
-    }
-  },
-
-    // INPUT CHAGE
     inputChange: function(e) {
-    console.log(this.$ref)
-      const selectOption = e.target.name
-      const setNumber = this[selectOption];
-      this.gltf[selectOption].set(setNumber.x, setNumber.y, setNumber.z)
+      const inputName = e.target.name;
+      this.gltf[inputName].set(this[inputName].x, this[inputName].y, this[inputName].z)
       this.renderer.render(this.scene, this.camera);
-    }
+
+    },
   },
+
 }
 </script>
 
 <style>
 #container {
-  height: 500px;
-  width: 500px;
+  height: 100%;
 }
 *{
   margin: 0px;
   padding: 0px;
+  box-sizing: border-box;
 }
 .mainContainer {
-  width: 500px;
-  margin: auto;
+  width: 100vw;
+  height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+.input_select_field {
+  position: absolute;
+  left: 10px;
+  top: 10px;
 }
 </style>
