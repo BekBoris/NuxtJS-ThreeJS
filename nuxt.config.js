@@ -39,12 +39,14 @@ export default {
   ** Nuxt.js modules
   */
   modules: [
+
   ],
 
   /*
   ** Build configuration
   */
   build: {
+    transpile: ['GLTFLoader.js', 'OrbitControls.js', 'TransformControls.js'],
     /*
     ** You can extend webpack config here
     */
