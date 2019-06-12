@@ -5,21 +5,21 @@
     <div class="inputselectfield">
     <div>
       <p>Position</p>
-      <input type="number" name="position" v-model="redraw.position.x" />
-      <input type="number" name="position" v-model="redraw.position.y" />
-      <input type="number" name="position" v-model="redraw.position.z" />
+      <input type="number" name="position" v-model="location_model.position.x" />
+      <input type="number" name="position" v-model="location_model.position.y" />
+      <input type="number" name="position" v-model="location_model.position.z" />
     </div>
     <div>
       <p>Position</p>
-      <input type="number" name="rotation" v-model="redraw.rotation.x" />
-      <input type="number" name="rotation" v-model="redraw.rotation.y" />
-      <input type="number" name="rotation" v-model="redraw.rotation.z" />
+      <input type="number" name="rotation" v-model="location_model.rotation.x" />
+      <input type="number" name="rotation" v-model="location_model.rotation.y" />
+      <input type="number" name="rotation" v-model="location_model.rotation.z" />
     </div>
     <div>
       <p>Position</p>
-      <input type="number" name="scale" v-model="redraw.scale.x" />
-      <input type="number" name="scale" v-model="redraw.scale.y" />
-      <input type="number" name="scale" v-model="redraw.scale.z" />
+      <input type="number" name="scale" v-model="location_model.scale.x" />
+      <input type="number" name="scale" v-model="location_model.scale.y" />
+      <input type="number" name="scale" v-model="location_model.scale.z" />
     </div>
 
       <div>
@@ -42,7 +42,7 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 
 export default {
   name: 'THREETest',
-  data() {
+  data: function() {
     return {
       camera: null,
       scene: null,
@@ -56,13 +56,15 @@ export default {
                 {text: "scale", value: "scale"}
               ],
 
-      redraw: { position: {x: 0, y: 0, z: 0},
+      location_model: { position: {x: 0, y: 0, z: 0},
                 rotation: {x: 0, y: 0, z: 0},
                 scale: { x: 3, y: 3, z: 3 },
           },
     };
   },
-  mounted() {
+  mounted: function() {
+    this.unwatch = $nuxt.$watch(()=>this.location_model, ()=>{this.redraw()}, {deep: true})
+
     let container = this.$refs.container;
     // SET AND ADD CAMERA
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -100,9 +102,9 @@ export default {
       const gltf_position = this.gltf.position;
       const gltf_rotation = this.gltf.rotation;
       const gltf_scale = this.gltf.scale;
-      this.redraw.position = {x: gltf_position.x, y: gltf_position.y, z: gltf_position.z};
-      this.redraw.rotation = {x: gltf_rotation.x, y: gltf_rotation.y, z: gltf_rotation.z};
-      this.redraw.scale = {x: gltf_scale.x, y: gltf_scale.y, z: gltf_scale.z};
+      this.location_model.position = {x: gltf_position.x, y: gltf_position.y, z: gltf_position.z};
+      this.location_model.rotation = {x: gltf_rotation.x, y: gltf_rotation.y, z: gltf_rotation.z};
+      this.location_model.scale = {x: gltf_scale.x, y: gltf_scale.y, z: gltf_scale.z};
       this.orbit.enabled = ! event.value
     });
     // ADD GLTFLOADER
@@ -116,7 +118,7 @@ export default {
       this.control.attach( gltf.scene );
       this.scene.add( this.control );
 
-      const gltf_scale = this.redraw.scale;
+      const gltf_scale = this.location_model.scale;
       gltf.scene.scale.set(gltf_scale.x, gltf_scale.y, gltf_scale.z)
       this.orbit.update();
 
@@ -126,27 +128,34 @@ export default {
       console.log(error);
     });
  },
+
+ methods: {
+   redraw: function() {
+     const position = this.location_model.position;
+     const rotation = this.location_model.rotation;
+     const scale = this.location_model.scale;
+     this.gltf.position.set(position.x, position.y, position.z);
+     this.gltf.rotation.set(rotation.x, rotation.y, rotation.z);
+     this.gltf.scale.set(scale.x, scale.y, scale.z);
+     this.renderer.render(this.scene, this.camera);
+
+   },
+
+ },
+
   watch: {
     selectedtool: function(e) {
       this.selectedtool = e;
       this.control.setMode (e);
 
     },
-    redraw: {
+    location_model: {
       deep: true,
-      handler: function (e) {
-        const position = e.position;
-        const rotation = e.rotation;
-        const scale = e.scale;
-        this.gltf.position.set(position.x, position.y, position.z);
-        this.gltf.rotation.set(rotation.x, rotation.y, rotation.z);
-        this.gltf.scale.set(scale.x, scale.y, scale.z);
-        this.renderer.render(this.scene, this.camera);
+      handler: function () {
+
       }
-    }
+    },
   },
-
-
 }
 </script>
 
