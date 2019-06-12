@@ -149,12 +149,6 @@ export default {
       this.control.setMode (e);
 
     },
-    location_model: {
-      deep: true,
-      handler: function () {
-
-      }
-    },
   },
 }
 </script>
