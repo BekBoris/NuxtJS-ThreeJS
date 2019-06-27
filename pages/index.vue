@@ -18,6 +18,13 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
+class Asset {
+  constructor(model, name) {
+    this.model = model;
+    this.name = name;
+  }
+}
+
 export default {
   name: "THREETest",
   data: function() {
@@ -28,11 +35,8 @@ export default {
       gltf: null,
       orbit_controls: null,
       transform_controls: null,
-      raycaster: null,
-      mouse: null,
-      intersects: null,
-      load_gltf_models: [],
-      load_gltf_model_names: [],
+
+      asset_array: [],
       gltf_clicked_name: ""
     };
   },
@@ -93,8 +97,8 @@ export default {
       this.orbit_controls.enabled = !event.value;
     });
 
-    this.raycaster = new THREE.Raycaster();
-    this.mouse = new THREE.Vector2();
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
 
     this.$refs.file.onclick = event => event.stopPropagation();
 
@@ -102,20 +106,23 @@ export default {
       event.preventDefault();
       // calculate mouse position in normalized device coordinates
       // (-1 to +1) for both components
-      this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
       // update the picking ray with the camera and mouse position
-      this.raycaster.setFromCamera(this.mouse, this.camera);
+      raycaster.setFromCamera(mouse, this.camera);
 
-      this.intersects = this.raycaster.intersectObjects(
-        this.load_gltf_models,
-        true
-      );
-      if (this.intersects.length !== 0) {
-        this.intersects[0].object.traverseAncestors(a => {
+      const model_array = this.asset_array.map(a => {
+        return a.model;
+      });
+
+      const intersects = raycaster.intersectObjects(model_array, true);
+
+      if (intersects.length !== 0) {
+        intersects[0].object.traverseAncestors(a => {
           if (a.name.length > 0)
-            this.load_gltf_model_names.map(name => {
-              if (name === a.name) return (this.gltf_clicked_name = a.name);
+            this.asset_array.map(name => {
+              if (name.name === a.name)
+                return (this.gltf_clicked_name = a.name);
             });
         });
       }
@@ -137,8 +144,8 @@ export default {
           this.scene.add(gltf.scene);
 
           gltf.scene.name = prompt("Please Enter 3d Model Name");
-          this.load_gltf_model_names.push(gltf.scene.name);
-          this.load_gltf_models.push(gltf.scene);
+
+          this.asset_array.push(new Asset(gltf.scene, gltf.scene.name));
 
           // ADD CONTROLS TO MODEL
           this.transform_controls.attach(gltf.scene);
