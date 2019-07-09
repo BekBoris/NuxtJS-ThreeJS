@@ -131,39 +131,13 @@ export default {
 
       if (intersects[0] !== undefined) {
         this.transform_controls.attach(intersects[0].object);
-        // էս մասը հիմա փորձում եմ ուղղել
-        // intersects[0].object.traverseAncestors(a => {
-        //   if (a.name.length > 0) {
-        //     console.log(a.userData);
-        //     // this.assets.map(name => {
-        //     //   if (name.name === a.name) {
-        //     //     console.log(a.name);
-        //     //     return (this.gltf_clicked_name = a.name);
-        //     //   }
-        //     // });
-        //   }
-        // });
+        intersects[0].object.traverseAncestors(anc => {
+          if (anc.userData.asset !== undefined) {
+            const model_name = anc.userData.asset.name;
+            this.gltf_clicked_name = model_name;
+          }
+        });
       }
-
-      // if (intersects.length !== 0) {
-      //   intersects[0].object.traverseAncestors(a => {
-      //     if (a.name.length > 0) {
-      //       console.log(a.name);
-      //       //   this.asset.map(name => {
-      //       //     if (name.name === a.name)
-      //       //       return (this.gltf_clicked_name = a.name);
-      //       //   });
-      //     }
-      //   });
-      // }
-
-      // intersects.forEach(intersection => {
-      //   const asset = intersection.object.userData.asset;
-      //   if (asset === null) {
-      //     return;
-      //   }
-      // });
-      // this.gltf_clicked_name = asset.name;
     };
 
     window.addEventListener("click", onMouseClick, false);
@@ -185,9 +159,10 @@ export default {
             const asset = new Asset(name, gltf.scene.children);
             this.assets.push(asset);
             scene.children.forEach(mesh => {
-              mesh.userData = {
-                asset: asset
-              };
+              mesh.userData = { ...mesh.userData, asset };
+              // mesh.userData = {
+              //   asset: asset
+              // };
             });
             // ADD CONTROLS TO MODEL
 
