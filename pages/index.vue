@@ -9,6 +9,14 @@
         <input type="file" ref="file" @change="fileReader" />
       </div>
     </div>
+
+    <div class="controls">
+      <button type="button" name="translate" @click="controlSelect">
+        Translate
+      </button>
+      <button type="button" name="rotate" @click="controlSelect">Rotate</button>
+      <button type="button" name="scale" @click="controlSelect">Scale</button>
+    </div>
   </div>
 </template>
 
@@ -19,9 +27,9 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 class Asset {
-  constructor(model, name) {
-    this.model = model;
+  constructor(name, meshes) {
     this.name = name;
+    this.meshes = meshes;
   }
 }
 
@@ -36,7 +44,7 @@ export default {
       orbit_controls: null,
       transform_controls: null,
 
-      asset_array: [],
+      assets: [],
       gltf_clicked_name: ""
     };
   },
@@ -87,6 +95,8 @@ export default {
       this.camera,
       this.renderer.domElement
     );
+    this.scene.add(this.transform_controls);
+
     this.transform_controls.setSize(1);
     this.transform_controls.addEventListener("change", () => {
       this.renderer.render(this.scene, this.camera);
@@ -111,21 +121,49 @@ export default {
       // update the picking ray with the camera and mouse position
       raycaster.setFromCamera(mouse, this.camera);
 
-      const model_array = this.asset_array.map(a => {
-        return a.model;
-      });
+      const meshes = this.assets
+        .map(asset => {
+          return asset.meshes;
+        })
+        .flat();
 
-      const intersects = raycaster.intersectObjects(model_array, true);
+      const intersects = raycaster.intersectObjects(meshes, true);
 
-      if (intersects.length !== 0) {
-        intersects[0].object.traverseAncestors(a => {
-          if (a.name.length > 0)
-            this.asset_array.map(name => {
-              if (name.name === a.name)
-                return (this.gltf_clicked_name = a.name);
-            });
-        });
+      if (intersects[0] !== undefined) {
+        this.transform_controls.attach(intersects[0].object);
+        // էս մասը հիմա փորձում եմ ուղղել
+        // intersects[0].object.traverseAncestors(a => {
+        //   if (a.name.length > 0) {
+        //     console.log(a.userData);
+        //     // this.assets.map(name => {
+        //     //   if (name.name === a.name) {
+        //     //     console.log(a.name);
+        //     //     return (this.gltf_clicked_name = a.name);
+        //     //   }
+        //     // });
+        //   }
+        // });
       }
+
+      // if (intersects.length !== 0) {
+      //   intersects[0].object.traverseAncestors(a => {
+      //     if (a.name.length > 0) {
+      //       console.log(a.name);
+      //       //   this.asset.map(name => {
+      //       //     if (name.name === a.name)
+      //       //       return (this.gltf_clicked_name = a.name);
+      //       //   });
+      //     }
+      //   });
+      // }
+
+      // intersects.forEach(intersection => {
+      //   const asset = intersection.object.userData.asset;
+      //   if (asset === null) {
+      //     return;
+      //   }
+      // });
+      // this.gltf_clicked_name = asset.name;
     };
 
     window.addEventListener("click", onMouseClick, false);
@@ -136,20 +174,25 @@ export default {
   methods: {
     loadGLTF: function(gltf_array_buffer) {
       // ADD GLTFLOADER
-      const loader_gltfs = new GLTFLoader();
-      loader_gltfs.parse(
+      const loader = new GLTFLoader();
+      loader.parse(
         gltf_array_buffer,
         "",
         gltf => {
-          this.scene.add(gltf.scene);
+          const name = prompt("Please Enter 3d Model Name");
+          gltf.scenes.map(scene => {
+            this.scene.add(scene);
+            const asset = new Asset(name, gltf.scene.children);
+            this.assets.push(asset);
+            scene.children.forEach(mesh => {
+              mesh.userData = {
+                asset: asset
+              };
+            });
+            // ADD CONTROLS TO MODEL
 
-          gltf.scene.name = prompt("Please Enter 3d Model Name");
-
-          this.asset_array.push(new Asset(gltf.scene, gltf.scene.name));
-
-          // ADD CONTROLS TO MODEL
-          this.transform_controls.attach(gltf.scene);
-          this.scene.add(this.transform_controls);
+            this.transform_controls.attach(scene);
+          });
 
           gltf.scene.scale.set(5, 5, 5);
 
@@ -161,7 +204,7 @@ export default {
       );
     },
 
-    fileReader: function() {
+    fileReader: function(event) {
       const file = this.$refs.file.files[0];
       const readers = new FileReader();
 
@@ -169,7 +212,12 @@ export default {
         this.loadGLTF(e.target.result);
       });
 
+      event.target.value = null;
       readers.readAsArrayBuffer(file);
+    },
+
+    controlSelect: function(event) {
+      this.transform_controls.setMode(event.target.name);
     }
   }
 };
@@ -184,10 +232,18 @@ export default {
   padding: 0px;
   box-sizing: border-box;
 }
+html,
+body {
+  height: 100%;
+}
+canvas {
+  width: 100% !important;
+  height: 100%;
+}
 .mainContainer {
-  width: 100vw;
-  height: 100vh;
-  overflow-x: hidden;
+  width: 100%;
+
+  height: 100%;
   position: relative;
 }
 .inputselectfield {
@@ -202,5 +258,11 @@ export default {
   height: 30px;
   border-radius: 5px;
   text-align: center;
+}
+.controls {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translate(-50%);
 }
 </style>
