@@ -2,6 +2,12 @@
   <div class="mainContainer">
     <div ref="container" id="container"></div>
 
+    <div>
+      <video id="video" type="video/ogv" autoplay style="display:none">
+        <source src="../static/Sintel.ogv" type="video/ogg" />
+      </video>
+    </div>
+
     <div class="inputselectfield">
       <p class="selectedGLTF">{{ this.gltf_clicked_name }}</p>
 
@@ -81,6 +87,27 @@ export default {
     this.gridHelper = new THREE.GridHelper(size, divisions);
     this.scene.add(this.gridHelper);
 
+    //SET PLANEGEOMETRY
+    const video = document.getElementById("video");
+    // video.load(); // must call after setting/changing source
+    video.onloadeddata = function() {
+      console.log("test");
+      video.play();
+    };
+    const texture = new THREE.VideoTexture(video);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.format = THREE.RGBFormat;
+    texture.needsUpdate = true;
+
+    const geometry = new THREE.PlaneGeometry(5, 2);
+    const material = new THREE.MeshBasicMaterial({ map: texture });
+
+    const plane = new THREE.Mesh(geometry, material);
+    plane.material.side = THREE.DoubleSide;
+    plane.position.y = 1;
+    this.scene.add(plane);
+
     // SET ORBIT CONTROLS
     this.orbit_controls = new OrbitControls(
       this.camera,
@@ -121,14 +148,15 @@ export default {
       // update the picking ray with the camera and mouse position
       raycaster.setFromCamera(mouse, this.camera);
 
+      this.assets.push(new Asset("Screen", plane));
       const meshes = this.assets
         .map(asset => {
           return asset.meshes;
         })
         .flat();
 
+      // plane.raycast(raycaster, intersects);
       const intersects = raycaster.intersectObjects(meshes, true);
-
       if (intersects[0] !== undefined) {
         this.transform_controls.attach(intersects[0].object);
         intersects[0].object.traverseAncestors(anc => {
@@ -141,8 +169,8 @@ export default {
     };
 
     window.addEventListener("click", onMouseClick, false);
-
-    this.renderer.render(this.scene, this.camera);
+    this.animate();
+    // this.renderer.render(this.scene, this.camera);
   },
 
   methods: {
@@ -193,6 +221,11 @@ export default {
 
     controlSelect: function(event) {
       this.transform_controls.setMode(event.target.name);
+    },
+
+    animate: function() {
+      requestAnimationFrame(this.animate);
+      this.renderer.render(this.scene, this.camera);
     }
   }
 };
